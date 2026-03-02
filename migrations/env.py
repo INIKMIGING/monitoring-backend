@@ -5,7 +5,8 @@ from alembic import context
 
 # 1. Import setting dan Base model kamu
 from app.core.config import settings
-from app.db.base import Base
+from app.db.session import Base
+import app.db.base_imports
 # Import semua model agar terdeteksi oleh autogenerate
 import app.models  
 
