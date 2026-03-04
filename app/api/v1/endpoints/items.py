@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import asc, desc
 from datetime import datetime, timedelta
 
 from app.api.deps import get_db
@@ -23,6 +24,12 @@ def get_item_history(
     item_id: int,
     start_date: datetime = Query(..., description="Start datetime (ISO 8601)"),
     end_date: datetime = Query(..., description="End datetime (ISO 8601)"),
+
+    page: int = Query(1, ge=1),
+    page_size: int = Query(500, ge=1, le=5000),
+
+    sort: str = Query("asc", pattern="^(asc|desc)$"),
+
     db: Session = Depends(get_db)
 ):
 
@@ -31,35 +38,32 @@ def get_item_history(
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    # Validasi range
     if start_date >= end_date:
-        raise HTTPException(
-            status_code=400,
-            detail="start_date must be earlier than end_date"
-        )
+        raise HTTPException(status_code=400, detail="Invalid date range")
 
-    # Batasi range maksimal (anti abuse)
-    max_range_days = 7
-    if (end_date - start_date).days > max_range_days:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Maximum allowed range is {max_range_days} days"
-        )
+    # Hitung offset
+    offset = (page - 1) * page_size
 
-    # Query
+    # Tentukan sorting
+    order_by_clause = asc(ItemHistory.clock) if sort == "asc" else desc(ItemHistory.clock)
+
+    # Query dengan pagination
     history = (
-        db.query(ItemHistory)
+        db.query(
+            ItemHistory.clock,
+            ItemHistory.value_numeric
+        )
         .filter(
             ItemHistory.item_id == item_id,
             ItemHistory.clock >= start_date,
             ItemHistory.clock <= end_date
         )
-        .order_by(ItemHistory.clock.asc())
-        .limit(10000)
+        .order_by(order_by_clause)
+        .offset(offset)
+        .limit(page_size)
         .all()
     )
 
-    # Return explicit schema
     return [
         ItemHistoryResponse(
             clock=h.clock,
