@@ -1,5 +1,9 @@
 from pydantic_settings import BaseSettings
 
+SECRET_KEY = "supersecretkey"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
+
 class Settings(BaseSettings):
     APP_NAME: str
     APP_ENV: str
