@@ -1,6 +1,6 @@
 from sqlalchemy import Column, BigInteger, String, ForeignKey, TIMESTAMP
 from sqlalchemy.orm import relationship
-from app.db.base import Base
+from app.db.base_class import Base
 from sqlalchemy.sql import func
 
 class Item(Base):

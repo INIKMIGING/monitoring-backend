@@ -1,6 +1,6 @@
 from sqlalchemy import Column, BigInteger, ForeignKey, DateTime, Float, Index
 from sqlalchemy.orm import relationship
-from app.db.base import Base
+from app.db.base_class import Base
 
 class ItemHistory(Base):
     __tablename__ = "item_history"

@@ -1,5 +1,5 @@
 from sqlalchemy import Column, BigInteger, ForeignKey, DateTime, Float
-from app.db.base import Base
+from app.db.base_class import Base
 
 class LastValue(Base):
     __tablename__ = "last_values"
