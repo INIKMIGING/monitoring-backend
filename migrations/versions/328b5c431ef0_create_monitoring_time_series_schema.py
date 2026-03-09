@@ -1,8 +1,8 @@
 """create monitoring time-series schema
 
-Revision ID: 289006c1796d
+Revision ID: 328b5c431ef0
 Revises: 
-Create Date: 2026-02-27 11:04:04.221949
+Create Date: 2026-03-09 10:53:20.171653
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '289006c1796d'
+revision: str = '328b5c431ef0'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -32,6 +32,15 @@ def upgrade() -> None:
     sa.UniqueConstraint('hostid')
     )
     op.create_index(op.f('ix_hosts_id'), 'hosts', ['id'], unique=False)
+    op.create_table('users',
+    sa.Column('id', sa.BigInteger(), nullable=False),
+    sa.Column('username', sa.String(length=50), nullable=False),
+    sa.Column('password_hash', sa.String(length=255), nullable=False),
+    sa.Column('created_at', sa.TIMESTAMP(), server_default=sa.text('now()'), nullable=True),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('username')
+    )
+    op.create_index(op.f('ix_users_id'), 'users', ['id'], unique=False)
     op.create_table('items',
     sa.Column('id', sa.BigInteger(), nullable=False),
     sa.Column('itemid', sa.BigInteger(), nullable=False),
@@ -73,6 +82,8 @@ def downgrade() -> None:
     op.drop_table('item_history')
     op.drop_index(op.f('ix_items_id'), table_name='items')
     op.drop_table('items')
+    op.drop_index(op.f('ix_users_id'), table_name='users')
+    op.drop_table('users')
     op.drop_index(op.f('ix_hosts_id'), table_name='hosts')
     op.drop_table('hosts')
     # ### end Alembic commands ###
