@@ -2,9 +2,11 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.api.deps import get_db
-from app.api.v1.endpoints import hosts, items, auth
+from app.api.v1.endpoints import hosts, items, auth, metrics
 
 api_router = APIRouter()
+
+api_router.include_router(metrics.router)
 
 api_router.include_router(
     hosts.router,

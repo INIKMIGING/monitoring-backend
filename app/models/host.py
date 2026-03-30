@@ -10,6 +10,7 @@ class Host(Base):
     hostid = Column(BigInteger, unique=True, nullable=False)
     host = Column(String(128), nullable=False)
     visible_name = Column(String(128))
+    ip_address = Column(String(50), nullable=False, unique=True)
     location = Column(String(128))
     created_at = Column(TIMESTAMP, server_default=func.now())
 
