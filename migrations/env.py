@@ -22,7 +22,7 @@ target_metadata = Base.metadata
 
 def get_url():
     """Mengambil URL dari settings dan memastikan driver mysql+pymysql digunakan."""
-    url = settings.database_url
+    url = settings.DATABASE_URL
     if url and url.startswith("mysql://"):
         return url.replace("mysql://", "mysql+pymysql://", 1)
     return url

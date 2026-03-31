@@ -8,3 +8,19 @@ router = APIRouter()
 @router.get("/")
 def get_hosts(db: Session = Depends(get_db)):
     return db.query(Host).all()
+
+@router.put("/{host_id}/location")
+def update_location(host_id: int, location: str, db: Session = Depends(get_db)):
+    host = db.query(Host).filter(Host.id == host_id).first()
+
+    if not host:
+        return {"error": "Host not found"}
+
+    host.location = location
+    db.commit()
+    db.refresh(host)
+
+    return {
+        "message": "Location updated",
+        "data": host
+    }
