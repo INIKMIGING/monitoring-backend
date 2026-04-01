@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from app.api.deps import get_db
@@ -8,30 +8,31 @@ router = APIRouter()
 
 @router.get("/report")
 def get_summary(
-    range: str = Query(None),  # today | 7d
-    start: datetime = None,
-    end: datetime = None,
+    range: str = Query(None, description="today | 7d"),
+    start: datetime = Query(None),
+    end: datetime = Query(None),
     db: Session = Depends(get_db)
 ):
-    # --- HANDLE RANGE ---
+    # --- 1. HANDLE DATE RANGE ---
     now = datetime.utcnow()
 
     if range == "today":
         start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         end = now
-
     elif range == "7d":
         start = now - timedelta(days=7)
         end = now
-
     elif start and end:
         if (end - start).days > 60:
-            return {"error": "Max range is 60 days"}
-
+            raise HTTPException(status_code=400, detail="Max range is 60 days")
     else:
-        return {"error": "Invalid parameter"}
+        raise HTTPException(
+            status_code=400, 
+            detail="Invalid parameter. Please provide 'range=today', 'range=7d', or 'start' & 'end' dates."
+        )
 
-    # --- QUERY ---
+    # --- 2. EXECUTE QUERY ---
+    # Memastikan i.key_ digunakan di SELECT dan GROUP BY agar tidak terjadi 1054 error
     query = text("""
         SELECT 
             h.host as device,
@@ -46,32 +47,53 @@ def get_summary(
         GROUP BY h.host, i.key_
     """)
 
-    rows = db.execute(query, {"start": start, "end": end}).fetchall()
+    try:
+        rows = db.execute(query, {"start": start, "end": end}).fetchall()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database Error: {str(e)}")
 
-    # --- GROUPING ---
+    # --- 3. MAPPING & GROUPING ---
     result = {
         "cpu": [],
         "memory": [],
-        "bandwidth": []
+        "bandwidth": [],
+        "temperature": []
     }
 
     for row in rows:
         device = row.device
         key = row.item_key.lower()
 
+        # Helper untuk memastikan angka rapi (2 desimal) dan tidak null
+        def format_val(val):
+            return round(float(val), 2) if val is not None else 0.0
+
         data = {
             "device": device,
-            "min": float(row.min_value) if row.min_value else None,
-            "max": float(row.max_value) if row.max_value else None,
-            "avg": float(row.avg_value) if row.avg_value else None,
+            "min": format_val(row.min_value),
+            "max": format_val(row.max_value),
+            "avg": format_val(row.avg_value),
         }
 
-        # mapping type
+        # Logika filter berdasarkan string di item_key
         if "cpu" in key:
             result["cpu"].append(data)
         elif "mem" in key:
             result["memory"].append(data)
         elif "net" in key or "bandwidth" in key:
             result["bandwidth"].append(data)
+        elif "temp" in key:
+            result["temperature"].append(data)
 
-    return result
+    # --- 4. DATA AVAILABILITY CHECK ---
+    # Mengecek apakah semua list di dalam result kosong
+    is_empty = all(len(result[k]) == 0 for k in result)
+
+    # --- 5. FINAL RESPONSE STRUCTURE ---
+    return {
+        "status": "success",
+        "message": "No data found for this period" if is_empty else "Data retrieved successfully",
+        "total_categories": len(result),
+        "is_data_available": not is_empty,
+        "data": result
+    }
