@@ -8,12 +8,12 @@ from app.core.security import hash_password
 def seed_admin():
     db: Session = SessionLocal()
 
-    admin = db.query(User).filter(User.username == "admin").first()
+    admin = db.query(User).filter(User.username == "tgr").first()
 
     if not admin:
         admin = User(
-            username="admin",
-            password_hash=hash_password("admin123")
+            username="tgr",
+            password_hash=hash_password("tgrterserah")
         )
 
         db.add(admin)
